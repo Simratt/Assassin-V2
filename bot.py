@@ -26,7 +26,7 @@ async def on_ready():
     global server
     global members
 
-    server = bot.get_guild(1025162671068303391)
+    server = bot.get_guild(GUILD_ID)
     print(f'We have logged in as {bot.user} in Server: {server.name}')
     for i in server.members: 
         members.append(Player(i.id,i.name,i.discriminator))
