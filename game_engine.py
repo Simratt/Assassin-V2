@@ -1,5 +1,6 @@
 import random
 from datetime import datetime
+from typing import List
 
 
 
@@ -20,7 +21,9 @@ This is where most of the backend and game logic will be managed
 
 === functions ===
 
-new_game([Player]) - starts a brand new game with the list of all the Player objects in the game, assigns contracts, and dm's each player who their targets are
+new_game(.txt file) - starts a brand new game with the text files of all the players in the game
+                      the function then generates a list with player objects, assigns contracts, 
+                      and dm's each player who their targets are
 '''
 
 
@@ -45,6 +48,10 @@ class Player():
     '''
 
     def __init__(self, id:int, name:str, disc:str) -> None:
+        '''
+        <id> Discord id, <name> Discord username before #, <disc> the Discriminator i.e numbers after #
+        This function instantiates a new Player object
+        '''
         self._id = int(id)
         self.username = f"{name}#{disc}"
         self.net_worth = 0 
@@ -53,16 +60,15 @@ class Player():
 
     def __str__(self) -> str:
         '''Returns the string reprsentation of this Player'''
-        return f"{self._id} {self.username} | {self.secret}"
+        return f"{self.username} | {self.secret}"
 
     def __repr__(self) -> str:
         '''Returns the string reprsentation of this Player'''
-        return f"{self._id} {self.username} | {self.secret}"
+        return f"{self.username} | {self.secret}"
 
     def __eq__(self, other) -> bool: 
         ''' returns true if this Player == Other'''
         return self._id == other._id
-
 
     def getId(self) -> int:
         ''' Returns the _id attribute to send to the bot to fetch the user '''
@@ -83,6 +89,10 @@ class Player():
         ''' "Kills" the player, removing them from the game'''
         self.target = None
 
+    def isEmpty(self) -> bool:
+        '''returns True if player is Player(0, "Empty", "0000")'''
+        return self._id == 0
+        pass
 
 class Game(): 
     '''
@@ -96,10 +106,11 @@ class Game():
     def __init__(self, players:list[Player]) -> None:
         '''Initalizes all the variables needed for the game to run'''
         self.players = players
-        self.manifest = 'path/to/csvflie'
+        self.manifest = 'path/to/csvfile'
         self.active = len(players)
         self.ded = 0
         self.start = datetime.now()
+        self.winner = Player
 
     def __str__(self) -> str:
         '''
@@ -110,10 +121,10 @@ class Game():
         Active Agents: 10
         Fallen Agents: 3
         ''' 
-        return f"Game start: {self.start}\nPlayers: {self.players}\nActive Agents: {self.active}\nFallen Agents: {self.ded} "
+        return f"Game start: {self.start}\nPlayers: {self.players}\nActive Agents: {self.active}\nFallen Agents: {self.ded}"
     
     def __repr__(self) -> str: 
-        return f"Game start: {self.start}\nPlayers: {self.players}\nActive Agents: {self.active}\nFallen Agents: {self.ded} "
+        return f"Game start: {self.start}\nPlayers: {self.players}\nActive Agents: {self.active}\nFallen Agents: {self.ded}"
 
     def _contracts(self) -> str: 
         '''returns a string representation of all the contracts in the game'''
@@ -123,23 +134,6 @@ class Game():
         
         return cons
 
-    def newGame(self) -> None: 
-        ''' 
-        I think im going to get this function to assign contracts and then dm it to everyone, 
-        so maybe it will reuturn the list of players to the bot for the bot to then go through and 
-        dm everyone
-        '''
-        contracts = self.players.copy()
-        
-        for p in self.players: 
-            pick = contracts[random.randint(0, len(contracts)-1)]
-            while p == pick: 
-                pick = contracts[random.randint(0, len(contracts)-1)]
-            
-            p.assignTarget(pick)
-            contracts.remove(pick)
-        
-        return self.players
 
     def addPlayer(self) -> None: 
         pass
@@ -152,34 +146,61 @@ class Game():
             if p.getId() == id: 
                 return p 
         return None
-    
-    def returnBySecret(self, secret) -> Player or None:
-        for p in self.players: 
-            if p.secret == secret: 
-                return p 
-        return None
 
-    def completeContract(self, pid:int, secret:str) -> None: 
-        ''' This function finds the player with the secret <Player.secret> and transfers their target
-        to <assassin>'''
+    def completeContract(self, pid:int, secret:str) -> List[Player] or None: 
+        ''' 
+        This function finds the player with the secret <Player.secret> and transfers their target
+        to player with the id <pid>
+        
+        Returns [Assasin w/new target, Old Target] if contract was a success
+        Returns [Empty Player, Assassin] if contract was a success and Assassin is the last player left
+        Returns None if contract was unsucessful
+        
+        '''
+
         assassin = self.returnById(pid)
         target = assassin.getTarget()
+
         if int(secret) == target.secret: 
             assassin.assignTarget(target.getTarget())
             target.deactivate()
-            print(self._contracts)
-            return assassin
+            self.active -=1 
+            self.ded += 1
 
-        else: 
-            print(self._contracts)
+            if self.active == 1: 
+                return [Player(0, "Empty", "0000"), assassin] #returns an "empty" player
+            
+            return [assassin, target]
+            
+        else:
+            if self.active == 1: 
+                self.winner = assassin # Assign the winner as the assassin and return an empty player
+                return [Player(0, "Empty", "0000"), assassin]
+            
             return None
 
-        '''
-        works!! but the issue becomes tracking when there is only one person left and what happens 
-        when you get assigned yourself
-        '''
         
-    
+
+        '''
+        need to dm the target that they have died, message in the main chat, that there are n-1 players left, 
+        need to announce the winner and also 
+        '''
+
     def saveGame(self) -> None: 
         pass
+
+    def getWinner(self) -> Player: 
+        return str(self.winner)
+    
+    def assignContracts(self) -> None: 
+        ''' assign's contracts the derangement way'''
+        
+        random.shuffle(self.players)
+
+        for i in range(len(self.players)-1):
+            self.players[i].assignTarget(self.players[i+1])
+        
+        self.players[-1].assignTarget(self.players[0])
+        
+        return self.players
 
