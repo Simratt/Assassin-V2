@@ -122,4 +122,4 @@ async def endgame(ctx):
 # async def help(ctx):
 #     pass
 
-bot.run('MTAyNTE2MjE2MzM1NjE3MjM1MQ.GCuGj3.Jrlpa8fVXpoxCvPjvpUI4WqD5_FQrz6vVHHSaE')
+bot.run('TOKEN')
